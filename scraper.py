@@ -36,9 +36,12 @@ def is_valid(url):
     # Decide whether to crawl this url or not. 
     # If you decide to crawl it, return True; otherwise return False.
     # There are already some conditions that return False.
+
     try:
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
+            return False
+        elif not _valid_domain(url):
             return False
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
@@ -53,3 +56,22 @@ def is_valid(url):
     except TypeError:
         print ("TypeError for ", parsed)
         raise
+
+
+# Returns True if the following url is considered a domain
+def _valid_domain(url):
+    allowed = [
+        '.ics.uci.edu',
+        '.cs.uci.edu',
+        '.informatics.uci.edu',
+        '.stat.uci.edu'
+    ]
+
+    parsed_url = urlparse(url)
+
+    for domains in allowed:
+        #netloc is network location aka domain
+        if parsed_url.netloc.lower().endswith(domains): 
+            return True
+    
+    return False
