@@ -1,6 +1,5 @@
 import re
-from urllib.parse import urlparse
-from urllib.parse import urldefrag
+from urllib.parse import urlparse, urldefrag, urljoin
 
 from lxml import html, etree
 
@@ -18,21 +17,31 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    if resp.raw_response is None:
+
+    if _is_dead_url(resp):
         return list()
-    
+
     try:
         tree = html.fromstring(resp.raw_response.content)
     except etree.ParserError:
         return list()
         
-    urls = tree.xpath('//a/@href')
+    # Gather all links from a page
+    hrefs = tree.xpath('//a/@href')
+    
+    valid_hrefs = list()
 
-    return list(defragment(url) for url in urls if is_valid(url))
+    for href in hrefs:
+        absolute_url = urljoin(resp.url, href) # Handle instances where href is a destination (i.e. `/target`)
+
+        if is_valid(absolute_url) and not _is_similar(absolute_url):
+            valid_hrefs.append(_defragment(absolute_url))
+
+    return valid_hrefs
 
 
 # Removes the fragment part from URLs
-def defragment(url) -> str:
+def _defragment(url) -> str:
     clean_url, _ = urldefrag(url)
     return clean_url
 
@@ -45,10 +54,11 @@ def is_valid(url):
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
-        elif not _valid_domain(url):
+        elif not _is_valid_domain(url):
             return False
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
+            + r"|"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
             + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
@@ -63,7 +73,7 @@ def is_valid(url):
 
 
 # Returns True if the following url is considered a domain
-def _valid_domain(url):
+def _is_valid_domain(url):
     allowed = [
         '.ics.uci.edu',
         '.cs.uci.edu',
@@ -78,4 +88,21 @@ def _valid_domain(url):
         if parsed_url.netloc.lower().endswith(domains): 
             return True
     
+    return False    
+
+# Determines if the URL is a dead URL (returns 200 status but no data)
+def _is_dead_url(resp):
+    if resp.raw_response is None or resp.raw_response.content is None:
+        return True
+    elif (len(resp.raw_response.content)) <= 100:
+        return True
     return False
+
+# Determines if the pages are similar
+# TODO: How strict do we want this to be?
+def _is_similar(url):
+    parsed_url = urlparse(url)
+    if parsed_url.query:
+        return True
+    else:
+        return False
