@@ -2,7 +2,7 @@ import re
 from urllib.parse import urlparse
 from urllib.parse import urldefrag
 
-from lxml import html
+from lxml import html, etree
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -20,8 +20,12 @@ def extract_next_links(url, resp):
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     if resp.raw_response is None:
         return list()
-
-    tree = html.fromstring(resp.raw_response.content)
+    
+    try:
+        tree = html.fromstring(resp.raw_response.content)
+    except etree.ParserError:
+        return list()
+        
     urls = tree.xpath('//a/@href')
 
     return list(defragment(url) for url in urls if is_valid(url))
