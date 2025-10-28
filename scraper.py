@@ -32,7 +32,7 @@ def extract_next_links(url, resp):
     valid_hrefs = list()
 
     for href in hrefs:
-        absolute_url = urljoin(resp.url, href) # Handle instances where href is a destination (i.e. `href=/target`) <a href="https://google.com/target"> </a>
+        absolute_url = urljoin(resp.url, href) # Handle instances where href is a destination (i.e. `href=/target`)
 
         if is_valid(absolute_url):
             valid_hrefs.append(_defragment(absolute_url))
