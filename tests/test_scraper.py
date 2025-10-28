@@ -1,5 +1,6 @@
 import unittest
-from scraper import _defragment, _is_valid_domain
+from scraper import _defragment,_is_valid_domain
+
 
 class TestScraper(unittest.TestCase):
 

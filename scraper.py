@@ -32,9 +32,9 @@ def extract_next_links(url, resp):
     valid_hrefs = list()
 
     for href in hrefs:
-        absolute_url = urljoin(resp.url, href) # Handle instances where href is a destination (i.e. `/target`)
+        absolute_url = urljoin(resp.url, href) # Handle instances where href is a destination (i.e. `href=/target`) <a href="https://google.com/target"> </a>
 
-        if is_valid(absolute_url) and not _is_similar(absolute_url):
+        if is_valid(absolute_url):
             valid_hrefs.append(_defragment(absolute_url))
 
     return valid_hrefs
@@ -94,15 +94,6 @@ def _is_valid_domain(url):
 def _is_dead_url(resp):
     if resp.raw_response is None or resp.raw_response.content is None:
         return True
-    elif (len(resp.raw_response.content)) <= 100:
+    elif (len(resp.raw_response.content)) <= 100: # May need to tune 100 
         return True
     return False
-
-# Determines if the pages are similar
-# TODO: How strict do we want this to be?
-def _is_similar(url):
-    parsed_url = urlparse(url)
-    if parsed_url.query:
-        return True
-    else:
-        return False
