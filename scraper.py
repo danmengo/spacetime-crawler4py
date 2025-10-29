@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlparse, urldefrag, urljoin
+from urllib.parse import urlparse, urldefrag, urljoin, parse_qs
 
 from lxml import html, etree
 
@@ -18,7 +18,7 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
 
-    if _is_dead_url(resp):
+    if resp.raw_response is None or resp.raw_response.content is None or _is_dead_url(resp):
         return list()
 
     try:
@@ -34,7 +34,7 @@ def extract_next_links(url, resp):
     for href in hrefs:
         absolute_url = urljoin(resp.url, href) # Handle instances where href is a destination (i.e. `href=/target`)
 
-        if is_valid(absolute_url):
+        if is_valid(absolute_url) and not _is_low_value_by_path(absolute_url) and not _is_low_value_by_query(absolute_url): 
             valid_hrefs.append(_defragment(absolute_url))
 
     return valid_hrefs
@@ -71,7 +71,6 @@ def is_valid(url):
         print ("TypeError for ", parsed)
         raise
 
-
 # Returns True if the following url is considered a domain
 def _is_valid_domain(url):
     allowed = [
@@ -92,8 +91,47 @@ def _is_valid_domain(url):
 
 # Determines if the URL is a dead URL (returns 200 status but no data)
 def _is_dead_url(resp):
-    if resp.raw_response is None or resp.raw_response.content is None:
-        return True
+    if resp.status != 200:
+        return False
     elif (len(resp.raw_response.content)) <= 100: # May need to tune 100 
         return True
+    return False
+
+# Determines if the pages are similar with no information
+# TODO: Try removing idx and do at the end
+def _is_low_value_by_query(url):
+    ignoredKeys = set([
+        'tab_files', 'tab_details', 'tab_upload', 
+        'idx', 'do', 'view', 'action',
+        'expanded', 'ref_tags', 'format', 'sort'
+    ])
+
+    parsed_url = urlparse(url)
+    query_dict = parse_qs(parsed_url.query)
+
+    for key in query_dict.keys():
+        if key in ignoredKeys:
+            return True
+        
+    return False
+
+def _is_low_value_by_path(url):
+    
+    ignored_paths = [
+        '/-/issues',
+        '/-/merge_requests',
+        '/-/forks',
+        '/-/starrers',
+        '/-/branches',
+        '/-/tags',
+        '/-/commit',
+        '/-/tree'
+    ]
+
+    parsed_url = urlparse(url)
+    path = parsed_url.path
+
+    for pattern in ignored_paths:
+        if re.search(pattern, path):
+            return True
     return False
