@@ -33,10 +33,12 @@ def extract_next_links(url, resp):
     valid_hrefs = list()
 
     for href in hrefs:
-        absolute_url = urljoin(resp.url, href) # Handle instances where href is a destination (i.e. `href=/target`)
-
-        if is_valid(absolute_url) and not _is_low_value_by_path(absolute_url) and not _is_low_value_by_query(absolute_url) and not _is_low_level_by_regex(absolute_url): 
-            valid_hrefs.append(_defragment(absolute_url))
+        try:
+            absolute_url = urljoin(resp.url, href) # Handle instances where href is a destination (i.e. `href=/target`)
+            if is_valid(absolute_url) and not _is_low_value_by_path(absolute_url) and not _is_low_value_by_query(absolute_url) and not _is_low_level_by_regex(absolute_url): 
+                valid_hrefs.append(_defragment(absolute_url))
+        except:
+            continue
 
     return valid_hrefs
 
@@ -106,7 +108,8 @@ def _is_low_value_by_query(url):
         'expanded', 'ref_tags', 'format', 'sort',
         'tribe-bar-date',
         'ical', 'outlook-ical', 'eventDisplay',
-        'share', 'display'
+        'share', 'display', 'redirect_to',
+        'from'
     ])
 
     parsed_url = urlparse(url)
@@ -144,7 +147,13 @@ def _is_low_level_by_regex(url):
     parsed_url = urlparse(url)
     regexes = [
         re.compile(r"/day/\d{4}-\d{2}-\d{2}(/|$)"), # /day/2025-20-10
-        re.compile(r"/events/\d{4}-\d{2}-\d{2}(/|$)")
+        re.compile(r"/events/\d{4}-\d{2}-\d{2}(/|$)"),
+        re.compile(r"/events/month/\d{4}-\d{2}(/|$)"),
+        re.compile(r"/events/category(?:/[^/]+)?/\d{4}-\d{2}(/|$)"),    
+        re.compile(r"/project-meeting/\d{4}-\d{2}(/|$)"),
+        re.compile(r"/talks/\d{4}-\d{2}(/|$)"),
+        re.compile(r"/talk/\d{4}-\d{2}(/|$)"),
+        re.compile(r"/~eppstein/pix")
     ]
 
     for regex in regexes:
