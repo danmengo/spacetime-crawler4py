@@ -1,6 +1,5 @@
 import re
-from urllib.parse import urlparse
-from urllib.parse import urldefrag
+from urllib.parse import urlparse, urldefrag, urljoin, parse_qs
 
 from lxml import html, etree
 
@@ -18,21 +17,41 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    if resp.raw_response is None:
+
+    # Only process successful HTML responses
+    if resp.status != 200:
         return list()
-    
+    if resp.raw_response is None or resp.raw_response.content is None or _is_dead_url(resp):
+        return list()
+    content_type = None
+    try:
+        content_type = resp.raw_response.headers.get('Content-Type') if hasattr(resp.raw_response, 'headers') else None
+    except Exception:
+        content_type = None
+    if content_type is not None and 'text/html' not in content_type.lower():
+        return list()
+
     try:
         tree = html.fromstring(resp.raw_response.content)
     except etree.ParserError:
         return list()
         
-    urls = tree.xpath('//a/@href')
+    # Gather all links from a page
+    hrefs = tree.xpath('//a/@href')
+    
+    valid_hrefs = list()
 
-    return list(defragment(url) for url in urls if is_valid(url))
+    for href in hrefs:
+        absolute_url = urljoin(resp.url, href) # Handle instances where href is a destination (i.e. `href=/target`)
+
+        if is_valid(absolute_url) and not _is_low_value_by_path(absolute_url) and not _is_low_value_by_query(absolute_url): 
+            valid_hrefs.append(_defragment(absolute_url))
+
+    return valid_hrefs
 
 
 # Removes the fragment part from URLs
-def defragment(url) -> str:
+def _defragment(url) -> str:
     clean_url, _ = urldefrag(url)
     return clean_url
 
@@ -40,15 +59,43 @@ def is_valid(url):
     # Decide whether to crawl this url or not. 
     # If you decide to crawl it, return True; otherwise return False.
     # There are already some conditions that return False.
+    # TODO: check if valid domain and that we haven't crawled it before (look at fragment of URl)
 
     try:
+        # Denylist for specific known-bad pages
+        denylist = {
+            'http://luci.ics.uci.edu/luciinterace.html',
+            'https://ics.uci.edu/~babaks/site/codes.html',
+        }
+        if url.lower() in denylist:
+            return False
+
+        blockedList = ["evoke","wics","ngs","chen-li", "sli"]
+
         parsed = urlparse(url)
+
         if parsed.scheme not in set(["http", "https"]):
             return False
-        elif not _valid_domain(url):
-            return False
+
+        # Special-case: allow only the root of luci.ics.uci.edu
+        if parsed.hostname and parsed.hostname.lower() == 'luci.ics.uci.edu':
+            if parsed.path not in (None, '', '/'):
+                return False
+
+        if not re.match(r".+\.ics\.uci\.edu", parsed.hostname):
+            if not re.match(r".+\.cs\.uci\.edu", parsed.hostname):
+                if not re.match(r".+\.informatics\.uci\.edu", parsed.hostname):
+                    if not re.match(r".+\.stat\.uci\.edu", parsed.hostname):  
+                        if not re.match(r".+today\.uci\.edu", parsed.hostname) and not re.match(r".+department\/information_computer_sciences.*", parsed.path.lower()):
+                            return False
+
+        for blocked in blockedList:
+            match = url.find(blocked)
+            if match > -1:
+                return False
+
         return not re.match(
-            r".*\.(css|js|bmp|gif|jpe?g|ico"
+            r".*\.(css|js|bmp|gif|jpe?g|ico|ppsx"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
             + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
@@ -58,12 +105,10 @@ def is_valid(url):
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
 
     except TypeError:
-        print ("TypeError for ", parsed)
-        raise
-
+        return False
 
 # Returns True if the following url is considered a domain
-def _valid_domain(url):
+def _is_valid_domain(url):
     allowed = [
         '.ics.uci.edu',
         '.cs.uci.edu',
@@ -78,4 +123,54 @@ def _valid_domain(url):
         if parsed_url.netloc.lower().endswith(domains): 
             return True
     
+    return False    
+
+# Determines if the URL is a dead URL (returns 200 status but no data)
+def _is_dead_url(resp):
+    if resp.status != 200:
+        return False
+    elif (len(resp.raw_response.content)) <= 100: # May need to tune 100 
+        return True
+    return False
+
+# Determines if the pages are similar with no information
+# TODO: Try removing idx and do at the end
+def _is_low_value_by_query(url):
+    ignoredKeys = set([
+        'tab_files', 'tab_details', 'tab_upload', 
+        'idx', 'do', 'view', 'action',
+        'expanded', 'ref_tags', 'format', 'sort',
+        'outlook-ical', 'ical'
+    ])
+    # Ignore paginated event list dates like .../list/?tribe-bar-date=2021-01-06
+    ignoredKeys.add('tribe-bar-date')
+
+    parsed_url = urlparse(url)
+    query_dict = parse_qs(parsed_url.query)
+
+    for key in query_dict.keys():
+        if key in ignoredKeys:
+            return True
+        
+    return False
+
+def _is_low_value_by_path(url):
+    
+    ignored_paths = [
+        '/-/issues',
+        '/-/merge_requests',
+        '/-/forks',
+        '/-/starrers',
+        '/-/branches',
+        '/-/tags',
+        '/-/commit',
+        '/-/tree'
+    ]
+
+    parsed_url = urlparse(url)
+    path = parsed_url.path
+
+    for pattern in ignored_paths:
+        if re.search(pattern, path):
+            return True
     return False
