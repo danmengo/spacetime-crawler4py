@@ -17,8 +17,9 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-
-    if resp.raw_response is None or resp.raw_response.content is None or _is_dead_url(resp):
+    if resp.status != 200:
+        return list()
+    elif resp.raw_response is None or resp.raw_response.content is None or _is_dead_url(resp):
         return list()
 
     try:
@@ -34,7 +35,7 @@ def extract_next_links(url, resp):
     for href in hrefs:
         absolute_url = urljoin(resp.url, href) # Handle instances where href is a destination (i.e. `href=/target`)
 
-        if is_valid(absolute_url) and not _is_low_value_by_path(absolute_url) and not _is_low_value_by_query(absolute_url): 
+        if is_valid(absolute_url) and not _is_low_value_by_path(absolute_url) and not _is_low_value_by_query(absolute_url) and not _is_low_level_by_regex(absolute_url): 
             valid_hrefs.append(_defragment(absolute_url))
 
     return valid_hrefs
@@ -58,7 +59,6 @@ def is_valid(url):
             return False
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
-            + r"|"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
             + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
@@ -103,7 +103,10 @@ def _is_low_value_by_query(url):
     ignoredKeys = set([
         'tab_files', 'tab_details', 'tab_upload', 
         'idx', 'do', 'view', 'action',
-        'expanded', 'ref_tags', 'format', 'sort'
+        'expanded', 'ref_tags', 'format', 'sort',
+        'tribe-bar-date',
+        'ical', 'outlook-ical', 'eventDisplay',
+        'share', 'display'
     ])
 
     parsed_url = urlparse(url)
@@ -125,7 +128,7 @@ def _is_low_value_by_path(url):
         '/-/branches',
         '/-/tags',
         '/-/commit',
-        '/-/tree'
+        '/-/tree',
     ]
 
     parsed_url = urlparse(url)
@@ -134,4 +137,18 @@ def _is_low_value_by_path(url):
     for pattern in ignored_paths:
         if re.search(pattern, path):
             return True
+    return False
+
+# Removes low level by regex
+def _is_low_level_by_regex(url):
+    parsed_url = urlparse(url)
+    regexes = [
+        re.compile(r"/day/\d{4}-\d{2}-\d{2}(/|$)"), # /day/2025-20-10
+        re.compile(r"/events/\d{4}-\d{2}-\d{2}(/|$)")
+    ]
+
+    for regex in regexes:
+        if regex.search(parsed_url.path):
+            return True
+        
     return False
