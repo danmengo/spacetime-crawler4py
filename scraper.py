@@ -17,8 +17,9 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-
-    if resp.raw_response is None or resp.raw_response.content is None or _is_dead_url(resp):
+    if resp.status != 200:
+        return list()
+    elif resp.raw_response is None or resp.raw_response.content is None or _is_dead_url(resp):
         return list()
 
     try:
@@ -141,14 +142,13 @@ def _is_low_value_by_path(url):
 # Removes low level by regex
 def _is_low_level_by_regex(url):
     parsed_url = urlparse(url)
-
     regexes = [
-        re.compile(r"/day/\d{4}-\d{2}-\d{2}(/|$)"),
+        re.compile(r"/day/\d{4}-\d{2}-\d{2}(/|$)"), # /day/2025-20-10
         re.compile(r"/events/\d{4}-\d{2}-\d{2}(/|$)")
     ]
 
     for regex in regexes:
         if regex.search(parsed_url.path):
             return True
-
+        
     return False
