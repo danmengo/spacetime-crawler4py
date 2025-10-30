@@ -3,9 +3,16 @@ import shelve
 
 from threading import Thread, RLock
 from queue import Queue, Empty
+from threading import Lock
+from urllib.parse import urlparse
 
 from utils import get_logger, get_urlhash, normalize
 from scraper import is_valid
+
+# per-path cap (enforced at enqueue time)
+MAX_PER_PATH = 100
+_per_path_counts = {}
+_per_path_lock = Lock()
 
 class Frontier(object):
     def __init__(self, config, restart):
@@ -54,12 +61,33 @@ class Frontier(object):
             return None
 
     def add_url(self, url):
+        """
+        Add a URL to the frontier. Return True if enqueued, False if skipped.
+        Enforces a per-(host+path) cap so counts reflect actual enqueues.
+        """
         url = normalize(url)
+
+        # Build a stable key for counting: hostname (lowercased) + normalized path
+        parsed = urlparse(url)
+        host = (parsed.hostname or "").lower()
+        path = parsed.path.rstrip('/') or '/'
+        path_key = host + path
+
+        # atomic check-and-increment
+        with _per_path_lock:
+            cnt = _per_path_counts.get(path_key, 0)
+            if cnt >= MAX_PER_PATH:
+                # skip enqueueing this URL; do not increase the count
+                return False
+            _per_path_counts[path_key] = cnt + 1
+
         urlhash = get_urlhash(url)
         if urlhash not in self.save:
             self.save[urlhash] = (url, False)
             self.save.sync()
             self.to_be_downloaded.append(url)
+            return True
+        return False
     
     def mark_url_complete(self, url):
         urlhash = get_urlhash(url)

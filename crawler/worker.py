@@ -23,12 +23,31 @@ class Worker(Thread):
             if not tbd_url:
                 self.logger.info("Frontier is empty. Stopping Crawler.")
                 break
+
+            # Pre-check for paths we know we want to skip
+            if scraper._is_low_value_by_path(tbd_url):
+                self.logger.info(f"Skipping known low-value path without download: {tbd_url}")
+                self.frontier.mark_url_complete(tbd_url)
+                continue
+
             resp = download(tbd_url, self.config, self.logger)
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
+            
+            # Get links but check if page was marked as login/restricted
             scraped_urls = scraper.scraper(tbd_url, resp)
+            
+            # If this was a login/restricted page, mark it complete and move on
+            # without processing its URLs (which are likely auth-related variants)
+            if not scraped_urls and scraper._is_login_page(resp):
+                self.logger.info(f"Marking restricted page as complete without processing links: {tbd_url}")
+                self.frontier.mark_url_complete(tbd_url)
+                continue
+
+            # Process valid URLs from non-restricted pages
             for scraped_url in scraped_urls:
                 self.frontier.add_url(scraped_url)
+            
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
