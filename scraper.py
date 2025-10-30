@@ -140,10 +140,13 @@ def _is_low_value_by_query(url):
         'tab_files', 'tab_details', 'tab_upload', 
         'idx', 'do', 'view', 'action',
         'expanded', 'ref_tags', 'format', 'sort',
-        'outlook-ical', 'ical'
+        'outlook-ical', 'ical', 'redirect_to'
     ])
     # Ignore paginated event list dates like .../list/?tribe-bar-date=2021-01-06
     ignoredKeys.add('tribe-bar-date')
+
+    # Reject if any query parameter looks like a date (e.g., 2025-09-17)
+    date_value_regex = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
     parsed_url = urlparse(url)
     query_dict = parse_qs(parsed_url.query)
@@ -151,6 +154,11 @@ def _is_low_value_by_query(url):
     for key in query_dict.keys():
         if key in ignoredKeys:
             return True
+        # Check values for date-like strings
+        values = query_dict.get(key, [])
+        for v in values:
+            if date_value_regex.match(v):
+                return True
         
     return False
 
@@ -169,6 +177,12 @@ def _is_low_value_by_path(url):
 
     parsed_url = urlparse(url)
     path = parsed_url.path
+
+    # Reject date-like paths such as /day/2023-01-01 or /2023/01/01
+    if re.search(r'/\d{4}-\d{2}-\d{2}(?:/|$)', path):
+        return True
+    if re.search(r'/\d{4}/\d{2}/\d{2}(?:/|$)', path):
+        return True
 
     for pattern in ignored_paths:
         if re.search(pattern, path):
