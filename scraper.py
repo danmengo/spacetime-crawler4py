@@ -133,34 +133,32 @@ def _is_dead_url(resp):
         return True
     return False
 
-# Determines if the pages are similar with no information
-# TODO: Try removing idx and do at the end
+
 def _is_low_value_by_query(url):
-    ignoredKeys = set([
-        'tab_files', 'tab_details', 'tab_upload', 
-        'idx', 'do', 'view', 'action',
-        'expanded', 'ref_tags', 'format', 'sort',
-        'outlook-ical', 'ical', 'redirect_to'
-    ])
-    # Ignore paginated event list dates like .../list/?tribe-bar-date=2021-01-06
-    ignoredKeys.add('tribe-bar-date')
+    """
+    Returns True if the URL likely has low value for crawling
+    based on its query parameters (e.g., pagination, calendar dates, etc.).
+    """
+    ignored_keys = {
+        'tab_files', 'tab_details', 'tab_upload', 'idx', 'do', 'view', 'action',
+        'expanded', 'ref_tags', 'format', 'sort', 'outlook-ical', 'ical',
+        'redirect_to', 'tribe-bar-date', 'timeline'
+    }
 
-    # Reject if any query parameter looks like a date (e.g., 2025-09-17)
-    date_value_regex = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+    parsed = urlparse(url)
+    query_params = parse_qs(parsed.query)
 
-    parsed_url = urlparse(url)
-    query_dict = parse_qs(parsed_url.query)
+    # Regex to detect date-like values (e.g., 2025-09-17)
+    date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
-    for key in query_dict.keys():
-        if key in ignoredKeys:
+    for key, values in query_params.items():
+        if key in ignored_keys:
             return True
-        # Check values for date-like strings
-        values = query_dict.get(key, [])
-        for v in values:
-            if date_value_regex.match(v):
-                return True
-        
+        if any(date_pattern.match(v) for v in values):
+            return True
+
     return False
+
 
 def _is_low_value_by_path(url):
     
