@@ -33,6 +33,8 @@ def extract_next_links(url, resp):
     valid_hrefs = list()
 
     for href in hrefs:
+        if "YOUR_IP" in href:
+            continue
         absolute_url = urljoin(resp.url, href) # Handle instances where href is a destination (i.e. `href=/target`)
 
         if is_valid(absolute_url) and not _is_low_value_by_path(absolute_url) and not _is_low_value_by_query(absolute_url) and not _is_low_level_by_regex(absolute_url): 
