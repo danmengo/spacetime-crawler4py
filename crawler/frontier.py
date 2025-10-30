@@ -49,6 +49,7 @@ class Frontier(object):
 
     def get_tbd_url(self):
         try:
+            self.logger.info(f"Length: {len(self.to_be_downloaded)}")
             return self.to_be_downloaded.pop()
         except IndexError:
             return None
