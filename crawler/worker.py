@@ -5,6 +5,7 @@ from utils.download import download
 from utils import get_logger
 import scraper
 import time
+from report import Report
 
 
 class Worker(Thread):

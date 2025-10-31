@@ -8,25 +8,26 @@ class Page:
         self.numWords = numWords
 
 class Report:
+    unique_pages = set()
+    longestPage = Page("", float('-inf'))
+    commonWords = Counter()
+    subdomains = defaultdict(int)
 
-    def __init__(self):
-        self.unique_pages = set()
-        self.longestPage = Page("", float('-inf'))
-        self.commonWords = Counter()
-        self.subdomains = defaultdict(int)
+    @classmethod
+    def add_unique_pages(cls, url):
+        cls.unique_pages.add(_defragment(url))
 
-    def add_unique_pages(self, url):
-        self.unique_pages.add(_defragment(url))
+    @classmethod
+    def update_longest_page(cls, page):
+        if page.numWords > cls.longestPage.numWords:
+            cls.longestPage = page
 
-    def update_longest_page(self, page):
-        if page.numWords > self.longestPage.numWords:
-            self.longestPage = page
-    
-    def add_common_words(self, resp):
-        # self.commonWords.update(words_counter)
-        pass
+    @classmethod
+    def add_common_words(cls, words_counter):
+        cls.commonWords.update(words_counter)
 
-    def add_subdomain(self, url):
-        url = urlparse(url)
-        if url.hostname:
-            self.subdomains[url.hostname] += 1
+    @classmethod
+    def add_subdomain(cls, url):
+        url_obj = urlparse(url)
+        if url_obj.hostname:
+            cls.subdomains[url_obj.hostname] += 1
