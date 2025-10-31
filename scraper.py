@@ -149,7 +149,8 @@ def _is_low_level_by_regex(url):
         re.compile(r"/day/\d{4}-\d{2}-\d{2}(/|$)"), # /day/2025-20-10
         re.compile(r"/events/\d{4}-\d{2}-\d{2}(/|$)"),
         re.compile(r"/events/month/\d{4}-\d{2}(/|$)"),
-        re.compile(r"/events/category(?:/[^/]+)?/\d{4}-\d{2}(/|$)"),    
+        re.compile(r"/events/category(?:/[^/]+)?/\d{4}-\d{2}(/|$)"),
+        re.compile(r"/events/tag/talks/\d{4}-\d{2}(/|$)"),    
         re.compile(r"/project-meeting/\d{4}-\d{2}(/|$)"),
         re.compile(r"/talks/\d{4}-\d{2}(/|$)"),
         re.compile(r"/talk/\d{4}-\d{2}(/|$)"),
