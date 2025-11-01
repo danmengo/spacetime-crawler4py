@@ -3,6 +3,8 @@ from urllib.parse import urlparse, urldefrag, urljoin, parse_qs
 
 from lxml import html, etree
 
+from report import Report
+
 def scraper(url, resp):
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
@@ -17,6 +19,9 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
+    Report.update_report(resp)
+    return list()
+
     if resp.status != 200:
         return list()
     elif resp.raw_response is None or resp.raw_response.content is None or _is_dead_url(resp):
