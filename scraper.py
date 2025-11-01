@@ -20,7 +20,6 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     Report.update_report(resp)
-    return list()
 
     if resp.status != 200:
         return list()
@@ -159,7 +158,9 @@ def _is_low_level_by_regex(url):
         re.compile(r"/project-meeting/\d{4}-\d{2}(/|$)"),
         re.compile(r"/talks/\d{4}-\d{2}(/|$)"),
         re.compile(r"/talk/\d{4}-\d{2}(/|$)"),
-        re.compile(r"/~eppstein/pix")
+        re.compile(r"/~eppstein/pix"),
+        re.compile(r"/research/seminarseries/(\d{4}-\d{4})"),
+        re.compile(r'^flamingo\.ics\.uci\.edu/\d+\.\d+(?:\.\d+)?$'),
     ]
 
     for regex in regexes:

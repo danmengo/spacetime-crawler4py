@@ -1,6 +1,7 @@
 from collections import defaultdict, Counter
 from urllib.parse import urlparse, urldefrag
 from lxml import html
+import re
 
 class Page:
     def __init__(self, url, numWords):
@@ -59,8 +60,11 @@ class Report:
     @classmethod
     def parse_words(cls, words_iter):
         count = 0
+        pattern = re.compile(r"^[A-Za-z']+$")
         for word in words_iter:
             if word in cls.stop_words:
+                continue
+            elif not pattern.match(word):
                 continue
             else:
                 cls.commonWords[word] += 1
@@ -86,7 +90,7 @@ class Report:
                 if element.tag not in ignored_tags:
                     if element.text:
                         for word in element.text.split():
-                            yield word
+                                yield word.lower()
 
         except:
             return []
