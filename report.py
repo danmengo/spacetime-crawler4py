@@ -60,7 +60,7 @@ class Report:
     @classmethod
     def parse_words(cls, words_iter):
         count = 0
-        pattern = re.compile(r"^[A-Za-z']+$")
+        pattern = re.compile(r"^[A-Za-z'-]+$")
         for word in words_iter:
             if word in cls.stop_words:
                 continue
@@ -80,17 +80,26 @@ class Report:
 
     @classmethod
     def _get_text_from_resp(cls, resp):
-        ignored_tags = set(['script', 'style', 'noscript'])
-
+        ignored_tags = {'script', 'style', 'noscript', 'head', 'meta', 'link', 'iframe', 'code', 'pre'}
         try:
-            tree = html.fromstring(resp.raw_response.content.decode('utf-8', errors = 'ignore'))    
-            html.etree.strip_elements(tree, 'script', 'style', 'noscript', with_tail = True)
+            content_type = resp.raw_response.headers.get('Content-Type', '').lower()
+            content_disp = resp.raw_response.headers.get('Content-Disposition', '').lower()
+            if 'attachment' in content_disp or not content_type.startswith('text/html'):
+                return []
 
-            for element in tree.iter():
-                if element.tag not in ignored_tags:
-                    if element.text:
-                        for word in element.text.split():
-                                yield word.lower()
+            tree = html.fromstring(resp.raw_response.content.decode('utf-8', errors='ignore'))
+            body = tree.find('body')
+
+            if body is None:
+                return []
+            
+            html.etree.strip_elements(body, *ignored_tags, with_tail=True)
+
+            for text in body.itertext():
+                text = text.strip()
+                if text:
+                    for word in text.split():
+                        yield word.lower()
 
         except:
             return []

@@ -160,7 +160,7 @@ def _is_low_level_by_regex(url):
         re.compile(r"/talk/\d{4}-\d{2}(/|$)"),
         re.compile(r"/~eppstein/pix"),
         re.compile(r"/research/seminarseries/(\d{4}-\d{4})"),
-        re.compile(r'^flamingo\.ics\.uci\.edu/\d+\.\d+(?:\.\d+)?$'),
+        re.compile(r"flamingo.ics.uci.edu/\d+\.\d+(?:\.\d+)?")
     ]
 
     for regex in regexes:
