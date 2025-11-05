@@ -18,7 +18,7 @@ class Report:
     subdomains = defaultdict(int)
 
     # Taken from Default English stopwords list 
-    # https://www.ranks.nl/stopwords
+    # Credit: https://www.ranks.nl/stopwords
     stop_words = {
         "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't",
         "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't",
@@ -44,7 +44,7 @@ class Report:
 
         words_count = cls.parse_words(cls._get_text_from_resp(resp))
         newPage = Page(resp.url, words_count)
-        cls.update_longest_page(newPage)
+        cls._update_longest_page(newPage)
           
 
     @classmethod
