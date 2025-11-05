@@ -60,7 +60,7 @@ class Report:
     @classmethod
     def parse_words(cls, words_iter):
         count = 0
-        pattern = re.compile(r"^[A-Za-z'-]+$")
+        pattern = re.compile(r"^[A-Za-z']+$")
         for word in words_iter:
             if word in cls.stop_words:
                 continue
@@ -105,11 +105,11 @@ class Report:
             return []
         
     @classmethod
-    def write_report_to_file(cls, filename = "Logs/report_output.txt"):
+    def write_report_to_file(cls, filename = "Logs/REPORT.txt"):
         with open(filename, 'w', encoding = 'utf-8') as f:
             f.write("=========Unique Pages=========\n")
             f.write(str(len(cls.unique_pages)))
-            f.write("\n============ Page=========\n")
+            f.write("\n============Longest Page=========\n")
             f.write(repr(cls.longestPage))
             f.write("\n=========50 Most Common Words=========\n")
             for key, value in cls.commonWords.most_common(50):

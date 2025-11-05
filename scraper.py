@@ -23,7 +23,7 @@ def extract_next_links(url, resp):
 
     if resp.status != 200:
         return list()
-    elif resp.raw_response is None or resp.raw_response.content is None or _is_dead_url(resp):
+    elif resp.raw_response is None or resp.raw_response.content is None:
         return list()
 
     try:
@@ -95,14 +95,6 @@ def _is_valid_domain(url):
     
     return False    
 
-# Determines if the URL is a dead URL (returns 200 status but no data)
-def _is_dead_url(resp):
-    if resp.status != 200:
-        return False
-    elif (len(resp.raw_response.content)) <= 100: # May need to tune 100 
-        return True
-    return False
-
 # Determines if the pages are similar with no information
 # TODO: Try removing idx and do at the end
 def _is_low_value_by_query(url):
@@ -136,6 +128,7 @@ def _is_low_value_by_path(url):
         '/-/tags',
         '/-/commit',
         '/-/tree',
+        '/prof-david-redmiles'
     ]
 
     parsed_url = urlparse(url)
@@ -150,7 +143,7 @@ def _is_low_value_by_path(url):
 def _is_low_level_by_regex(url):
     parsed_url = urlparse(url)
     regexes = [
-        re.compile(r"/day/\d{4}-\d{2}-\d{2}(/|$)"), # /day/2025-20-10
+        re.compile(r"/day/\d{4}-\d{2}-\d{2}(/|$)"),
         re.compile(r"/events/\d{4}-\d{2}-\d{2}(/|$)"),
         re.compile(r"/events/month/\d{4}-\d{2}(/|$)"),
         re.compile(r"/events/category(?:/[^/]+)?/\d{4}-\d{2}(/|$)"),
@@ -160,7 +153,40 @@ def _is_low_level_by_regex(url):
         re.compile(r"/talk/\d{4}-\d{2}(/|$)"),
         re.compile(r"/~eppstein/pix"),
         re.compile(r"/research/seminarseries/(\d{4}-\d{4})"),
-        re.compile(r"flamingo.ics.uci.edu/\d+\.\d+(?:\.\d+)?")
+        re.compile(r"flamingo.ics.uci.edu/\d+\.\d+(?:\.\d+)?"),
+        re.compile(r"docs/[^/]+\.html"),
+        re.compile(r"www.ics.uci.edu/releases/"),
+        re.compile(r"sccv/[^/]+\.html"),
+        re.compile(r"malek.ics.uci.edu/[^ ,]+"),
+        re.compile(r"transformativeplay.ics.uci.edu"),
+        re.compile(r"cs295-2020"),
+        re.compile(r"cs134-20"),
+        re.compile(r"cs205-20"),
+        re.compile(r"mondego.ics.uci.edu"),
+        re.compile(r"thornton/ProjectGuide"),
+        re.compile(r"thornton/Lab"),
+        re.compile(r"thornton/CourseProject"),
+        re.compile(r"thornton/WritingAssignments"),
+        re.compile(r"drupal"),
+        re.compile(r"~eppstein/(?:[^/]+/)*[^/]+\.(py|c|h)$"),
+        re.compile(r"~eppstein/numth/(?:[^/]+/)*[^/]+\.html$"),
+        re.compile(r"~eppstein/ca/b[^/]+\.(lif|html)$"),
+        re.compile(r"ca/rules/"),
+        re.compile(r"~eppstein/hw"),
+        re.compile(r"~eppstein/w25"),
+        re.compile(r"~eppstein/s25"),
+        re.compile(r"eppstein/163/s\d{2}[^/]*\.txt$"),
+        re.compile(r"~lab/schedules"),
+        re.compile(r"tmbpro.ics.uci.edu"),
+        re.compile(r"mine10.ics.uci.edu"),
+        re.compile(r"reactions.ics.uci.edu"),
+        re.compile(r".npy"),
+        re.compile(r"fall98/chapter"),
+        re.compile(r"MJCarey"),
+        re.compile(r"~dechter/[^/]+\.html$"),
+        re.compile(r".xhtml"),
+        re.compile(r"~dechter/r\d{2,}\.html$"),
+        re.compile(r"jutts/Midterm")
     ]
 
     for regex in regexes:
